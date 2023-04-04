@@ -50,7 +50,8 @@ public class Qos1PublishHandler extends AbstractQosPublishHandler {
         final String topic = msg.variableHeader().topicName();
         final CompletableFuture<Void> ret;
         if (MqttUtils.isRetainedMessage(msg)) {
-            ret = retainedMessageHandler.addRetainedMessage(msg);
+            ret = retainedMessageHandler.addRetainedMessage(msg)
+                .thenCompose(__ -> writeToPulsarTopic(msg, !MqttUtils.isMqtt3(protocolVersion)).thenApply(___ -> null));
         } else {
             ret = writeToPulsarTopic(msg, !MqttUtils.isMqtt3(protocolVersion)).thenApply(__ -> null);
         }
