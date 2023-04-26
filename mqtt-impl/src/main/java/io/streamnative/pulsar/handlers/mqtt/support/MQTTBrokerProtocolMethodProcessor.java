@@ -64,6 +64,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import lombok.Getter;
@@ -108,7 +109,7 @@ public class MQTTBrokerProtocolMethodProcessor extends AbstractCommonProtocolMet
                 mqttService.getServerConfiguration().isMqttAuthenticationEnabled(), ctx);
         this.pulsarService = mqttService.getPulsarService();
         this.configuration = mqttService.getServerConfiguration();
-        this.qosPublishHandlers = new QosPublishHandlersImpl(mqttService, configuration, ctx.channel());
+        this.qosPublishHandlers = mqttService.getQosPublishHandlers();
         this.packetIdGenerator = PacketIdGenerator.newNonZeroGenerator();
         this.outstandingPacketContainer = new OutstandingPacketContainerImpl();
         this.authorizationService = mqttService.getAuthorizationService();
@@ -210,13 +211,13 @@ public class MQTTBrokerProtocolMethodProcessor extends AbstractCommonProtocolMet
         metricsCollector.addSend(msg.payload().readableBytes());
         switch (qos) {
             case AT_MOST_ONCE:
-                return this.qosPublishHandlers.qos0().publish(adapter);
+                return this.qosPublishHandlers.qos0().publish(connection, adapter);
             case AT_LEAST_ONCE:
                 checkServerReceivePubMessageAndIncrementCounterIfNeeded(adapter);
-                return this.qosPublishHandlers.qos1().publish(adapter);
+                return this.qosPublishHandlers.qos1().publish(connection, adapter);
             case EXACTLY_ONCE:
                 checkServerReceivePubMessageAndIncrementCounterIfNeeded(adapter);
-                return this.qosPublishHandlers.qos2().publish(adapter);
+                return this.qosPublishHandlers.qos2().publish(connection, adapter);
             default:
                 log.error("[Publish] Unknown QoS-Type:{}", qos);
                 connection.getChannel().close();
@@ -293,7 +294,12 @@ public class MQTTBrokerProtocolMethodProcessor extends AbstractCommonProtocolMet
             metricsCollector.removeClient(NettyUtils.getAddress(channel));
             WillMessage willMessage = connection.getWillMessage();
             if (willMessage != null) {
-                willMessageHandler.fireWillMessage(clientId, willMessage);
+                try {
+                    // wait to will message to fire before continuing cleanup
+                    willMessageHandler.fireWillMessage(connection, willMessage).get();
+                } catch (ExecutionException | InterruptedException e) {
+                    log.error("[Connection Lost] [{}] Failed to fire will message: {}", clientId, e);
+                }
             }
             connectionManager.removeConnection(connection);
             mqttSubscriptionManager.removeSubscription(clientId);

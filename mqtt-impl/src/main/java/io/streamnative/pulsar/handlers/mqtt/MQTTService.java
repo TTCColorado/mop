@@ -15,6 +15,7 @@ package io.streamnative.pulsar.handlers.mqtt;
 
 import io.streamnative.pulsar.handlers.mqtt.support.MQTTMetricsCollector;
 import io.streamnative.pulsar.handlers.mqtt.support.MQTTMetricsProvider;
+import io.streamnative.pulsar.handlers.mqtt.support.QosPublishHandlersImpl;
 import io.streamnative.pulsar.handlers.mqtt.support.RetainedMessageHandler;
 import io.streamnative.pulsar.handlers.mqtt.support.WillMessageHandler;
 import io.streamnative.pulsar.handlers.mqtt.support.event.DisableEventCenter;
@@ -78,6 +79,9 @@ public class MQTTService {
     private final RetainedMessageHandler retainedMessageHandler;
 
     @Getter
+    private final QosPublishHandlers qosPublishHandlers;
+
+    @Getter
     @Setter
     private SystemEventService eventService;
 
@@ -102,9 +106,9 @@ public class MQTTService {
             this.eventCenter = new PulsarEventCenterImpl(brokerService,
                     serverConfiguration.getEventCenterCallbackPoolThreadNum());
         }
-        this.willMessageHandler = new WillMessageHandler(this);
         this.retainedMessageHandler = new RetainedMessageHandler(this);
-
+        this.qosPublishHandlers = new QosPublishHandlersImpl( this);
+        this.willMessageHandler = new WillMessageHandler(this);
     }
 
     public boolean isSystemTopicEnabled() {

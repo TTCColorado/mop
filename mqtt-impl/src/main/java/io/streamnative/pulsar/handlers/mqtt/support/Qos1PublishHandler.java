@@ -37,14 +37,13 @@ import org.apache.pulsar.common.util.FutureUtil;
 @Slf4j
 public class Qos1PublishHandler extends AbstractQosPublishHandler {
 
-    public Qos1PublishHandler(MQTTService mqttService, MQTTServerConfiguration configuration, Channel channel) {
-        super(mqttService, configuration, channel);
+    public Qos1PublishHandler(MQTTService mqttService) {
+        super(mqttService);
     }
 
     @Override
-    public CompletableFuture<Void> publish(MqttAdapterMessage adapter) {
+    public CompletableFuture<Void> publish(Connection connection, MqttAdapterMessage adapter) {
         final MqttPublishMessage msg = (MqttPublishMessage) adapter.getMqttMessage();
-        final Connection connection = NettyUtils.getConnection(channel);
         final int protocolVersion = connection.getProtocolVersion();
         final int packetId = msg.variableHeader().packetId();
         final String topic = msg.variableHeader().topicName();
