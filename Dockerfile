@@ -6,7 +6,7 @@ COPY . /opt/mop
 
 RUN mvn clean install -DskipTests
 
-FROM streamnative/sn-pulsar:2.10.0.3
+FROM streamnative/sn-pulsar:2.11.0.4
 
 RUN rm /pulsar/protocols/pulsar-protocol-handler-mqtt-*.nar
 
