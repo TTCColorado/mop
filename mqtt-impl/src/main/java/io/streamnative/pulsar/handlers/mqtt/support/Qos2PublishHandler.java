@@ -13,6 +13,7 @@
  */
 package io.streamnative.pulsar.handlers.mqtt.support;
 
+import io.netty.channel.Channel;
 import io.netty.handler.codec.mqtt.MqttPublishMessage;
 import io.streamnative.pulsar.handlers.mqtt.AbstractQosPublishHandler;
 import io.streamnative.pulsar.handlers.mqtt.Connection;

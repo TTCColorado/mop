@@ -37,7 +37,7 @@ public class Qos0PublishHandler extends AbstractQosPublishHandler {
         final MqttPublishMessage msg = (MqttPublishMessage) adapter.getMqttMessage();
         if (MqttUtils.isRetainedMessage(msg)) {
             return retainedMessageHandler.addRetainedMessage(msg)
-                .thenCompose( __ -> writeToPulsarTopic(msg).thenAccept(___ -> {}));
+                .thenCompose(__ -> writeToPulsarTopic(connection.getTopicAliasManager(), msg).thenAccept(___ -> {}));
         }
         return writeToPulsarTopic(connection.getTopicAliasManager(), msg).thenAccept(__ -> {});
     }
