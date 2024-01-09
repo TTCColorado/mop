@@ -36,7 +36,6 @@ podTemplate(yaml: '''
       - name: private-git-vol
         secret:
           secretName: private-git
-          defaultMode: 0600
 ''') {
   node(POD_LABEL) {
 
