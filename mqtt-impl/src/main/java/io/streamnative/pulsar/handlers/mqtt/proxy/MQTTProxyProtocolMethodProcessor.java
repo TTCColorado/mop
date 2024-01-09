@@ -363,13 +363,8 @@ public class MQTTProxyProtocolMethodProcessor extends AbstractCommonProtocolMeth
                             return FutureUtil.waitForAll(writeFutures);
                         })
                 ).collect(Collectors.toList());
-        try {
-            // add timeout so that we can eventually fail out of this
-            FutureUtil.waitForAll(futures).get();
-        } catch (Exception ex) {
-            return FutureUtil.failedFuture(ex);
-        }
-        return CompletableFuture.completedFuture(null);
+
+        return FutureUtil.waitForAll(futures);
     }
 
     private String getMqttTopicName(MqttTopicSubscription subscription, String encodedPulsarTopicName) {
@@ -421,13 +416,7 @@ public class MQTTProxyProtocolMethodProcessor extends AbstractCommonProtocolMeth
                         new MqttAdapterMessage(connection.getClientId(), unsubscribeMessage);
                 return writeToBroker(pulsarTopic, mqttAdapterMessage);
             }).collect(Collectors.toList());
-            try {
-                // NOTE: added a timeout here so we can eventually get an error message
-                FutureUtil.waitForAll(writeFutures).get(10, TimeUnit.SECONDS);
-                return CompletableFuture.completedFuture(null);
-            } catch (InterruptedException | ExecutionException | TimeoutException e) {
-                throw new CompletionException(e);
-            }
+            return FutureUtil.waitForAll(writeFutures);
         }).exceptionally(ex -> {
             log.error("[Proxy UnSubscribe] Failed to perform lookup request", ex);
             unsubscribeAckTracker.remove(msg.variableHeader().messageId());
