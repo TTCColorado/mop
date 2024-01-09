@@ -49,8 +49,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import lombok.Getter;
@@ -143,10 +142,8 @@ public class MQTTProxyProtocolMethodProcessor extends AbstractCommonProtocolMeth
     @Override
     public void processPublish(MqttAdapterMessage adapter) {
         final MqttPublishMessage msg = (MqttPublishMessage) adapter.getMqttMessage();
-        if (log.isDebugEnabled()) {
-            log.debug("[Proxy Publish] publish to topic = {}, CId={}",
-                    msg.variableHeader().topicName(), connection.getClientId());
-        }
+        log.info("[Proxy Publish] publish to topic = {}, CId={}",
+                msg.variableHeader().topicName(), connection.getClientId());
         final int packetId = msg.variableHeader().packetId();
         final String pulsarTopicName = PulsarTopicUtils.getEncodedPulsarTopicName(msg.variableHeader().topicName(),
                 proxyConfig.getDefaultTenant(), proxyConfig.getDefaultNamespace(),
@@ -196,9 +193,7 @@ public class MQTTProxyProtocolMethodProcessor extends AbstractCommonProtocolMeth
     @Override
     public void processPubAck(MqttAdapterMessage adapter) {
         final MqttPubAckMessage msg = (MqttPubAckMessage) adapter.getMqttMessage();
-        if (log.isDebugEnabled()) {
-            log.debug("[PubAck] [{}]", NettyUtils.getConnection(channel).getClientId());
-        }
+        log.info("[PubAck] [{}]", NettyUtils.getConnection(channel).getClientId());
         final int packetId = msg.variableHeader().messageId();
         adapter.setClientId(connection.getClientId());
         String topicName = packetIdTopic.remove(packetId);
@@ -258,9 +253,7 @@ public class MQTTProxyProtocolMethodProcessor extends AbstractCommonProtocolMeth
 
     @Override
     public void processConnectionLost() {
-        if (log.isDebugEnabled()) {
-            log.debug("[Proxy Connection Lost] [{}] ", connection.getClientId());
-        }
+        log.info("[Proxy Connection Lost] [{}] ", connection.getClientId());
         autoSubscribeHandler.close();
         if (connection != null) {
             // If client close the channel without calling disconnect, then we should call disconnect to notify broker
@@ -278,9 +271,7 @@ public class MQTTProxyProtocolMethodProcessor extends AbstractCommonProtocolMeth
         final String clientId = connection.getClientId();
         final int packetId = msg.variableHeader().messageId();
         adapter.setClientId(clientId);
-        if (log.isDebugEnabled()) {
-            log.debug("[Proxy Subscribe] [{}] msg: {}", clientId, msg);
-        }
+        log.info("[Proxy Subscribe] [{}] msg: {}", clientId, msg);
         registerTopicListener(adapter);
         doSubscribe(adapter, false)
                 .exceptionally(ex -> {
@@ -372,7 +363,13 @@ public class MQTTProxyProtocolMethodProcessor extends AbstractCommonProtocolMeth
                             return FutureUtil.waitForAll(writeFutures);
                         })
                 ).collect(Collectors.toList());
-        return FutureUtil.waitForAll(futures);
+        try {
+            // add timeout so that we can eventually fail out of this
+            FutureUtil.waitForAll(futures).get();
+        } catch (Exception ex) {
+            return FutureUtil.failedFuture(ex);
+        }
+        return CompletableFuture.completedFuture(null);
     }
 
     private String getMqttTopicName(MqttTopicSubscription subscription, String encodedPulsarTopicName) {
@@ -397,9 +394,7 @@ public class MQTTProxyProtocolMethodProcessor extends AbstractCommonProtocolMeth
     @Override
     public void processUnSubscribe(final MqttAdapterMessage adapter) {
         final MqttUnsubscribeMessage msg = (MqttUnsubscribeMessage) adapter.getMqttMessage();
-        if (log.isDebugEnabled()) {
-            log.debug("[Proxy UnSubscribe] [{}]", connection.getClientId());
-        }
+        log.info("[Proxy UnSubscribe] [{}]", connection.getClientId());
         msg.payload().topics().stream().map(topic -> {
             if (MqttUtils.isRegexFilter(topic)) {
                 TopicFilter filter = PulsarTopicUtils.getTopicFilter(topic);
@@ -426,7 +421,13 @@ public class MQTTProxyProtocolMethodProcessor extends AbstractCommonProtocolMeth
                         new MqttAdapterMessage(connection.getClientId(), unsubscribeMessage);
                 return writeToBroker(pulsarTopic, mqttAdapterMessage);
             }).collect(Collectors.toList());
-            return FutureUtil.waitForAll(writeFutures);
+            try {
+                // NOTE: added a timeout here so we can eventually get an error message
+                FutureUtil.waitForAll(writeFutures).get(10, TimeUnit.SECONDS);
+                return CompletableFuture.completedFuture(null);
+            } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                throw new CompletionException(e);
+            }
         }).exceptionally(ex -> {
             log.error("[Proxy UnSubscribe] Failed to perform lookup request", ex);
             unsubscribeAckTracker.remove(msg.variableHeader().messageId());
@@ -442,13 +443,16 @@ public class MQTTProxyProtocolMethodProcessor extends AbstractCommonProtocolMeth
 
     private CompletableFuture<AdapterChannel> connectToBroker(final String topic) {
         return topicBrokers.computeIfAbsent(topic,
-                key -> lookupHandler.findBroker(TopicName.get(topic)).thenApply(mqttBroker ->
-                        adapterChannels.computeIfAbsent(mqttBroker, key1 -> {
-                            AdapterChannel adapterChannel = proxyAdapter.getAdapterChannel(mqttBroker);
-                            adapterChannel.writeAndFlush(new MqttAdapterMessage(connection.getClientId(),
-                                connection.getConnectMessage()));
-                            return adapterChannel;
-                        })
+                key -> lookupHandler.findBroker(TopicName.get(topic)).thenApply(mqttBroker -> {
+                            log.info("Lookup found MQTT broker : {}", mqttBroker);
+                            return adapterChannels.computeIfAbsent(mqttBroker, key1 -> {
+                                AdapterChannel adapterChannel = proxyAdapter.getAdapterChannel(mqttBroker);
+                                log.info("Sending MQTT connect message to broker : {}", mqttBroker);
+                                adapterChannel.writeAndFlush(new MqttAdapterMessage(connection.getClientId(),
+                                        connection.getConnectMessage()));
+                                return adapterChannel;
+                            });
+                        }
                 )
         );
     }

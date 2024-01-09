@@ -106,6 +106,7 @@ public class PulsarServiceLookupHandler implements LookupHandler {
                                             return FutureUtil.failedFuture(new BrokerServiceException(
                                                     "The broker does not enabled the mqtt protocol handler."));
                                         }
+                                        log.info("[Lookup] [topic: {}] Found broker: {}", topicName, brokerUrl.get());
                                         String[] splits = brokerUrl.get().split(ConfigurationUtils.COLON);
                                         String port = splits[splits.length - 1];
                                         int mqttBrokerPort = Integer.parseInt(port);
