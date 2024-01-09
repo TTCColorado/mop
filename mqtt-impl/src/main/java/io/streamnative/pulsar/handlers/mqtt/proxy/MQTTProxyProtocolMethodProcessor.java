@@ -253,7 +253,7 @@ public class MQTTProxyProtocolMethodProcessor extends AbstractCommonProtocolMeth
 
     @Override
     public void processConnectionLost() {
-        log.info("[Proxy Connection Lost] [{}] ", connection.getClientId());
+        // log.info("[Proxy Connection Lost] [{}] ", connection.getClientId());
         autoSubscribeHandler.close();
         if (connection != null) {
             // If client close the channel without calling disconnect, then we should call disconnect to notify broker
