@@ -218,7 +218,7 @@ spec:
 //          docker.withRegistry('https://710915658486.dkr.ecr.us-east-2.amazonaws.com', 'ecr:us-east-2:devops-ecr-credential') {
 //            // push each image as latest
 //            docker.image('710915658486.dkr.ecr.us-east-2.amazonaws.com/ttc_pulsar').push("latest") //.push("${env.BUILD_NUMBER}")
-//            docker.image('710915658486.dkr.ecr.us-east-2.amazonaws.com/ttc_pulsar').push("2.11.0.4-ttc") //.push("${env.BUILD_NUMBER}")
+//            docker.image('710915658486.dkr.ecr.us-east-2.amazonaws.com/ttc_pulsar').push("3.1.1.2") //.push("${env.BUILD_NUMBER}")
 //          }
 //
 //        }
