@@ -221,11 +221,18 @@ public class MQTTProxyProtocolMethodProcessor extends AbstractCommonProtocolMeth
     @Override
     public void processPingReq(final MqttAdapterMessage msg) {
         String clientId = connection.getClientId();
-        topicBrokers.values().forEach(adapterChannel -> {
-            adapterChannel.thenAccept(channel -> {
-                msg.setClientId(clientId);
-                channel.writeAndFlush(msg);
-            });
+        // I don't know why this is forwarding per TOPIC rather than per proxy<->mop connection
+        // topicBrokers.values().forEach(adapterChannel -> {
+        //     adapterChannel.thenAccept(channel -> {
+        //         msg.setClientId(clientId);
+        //         channel.writeAndFlush(msg);
+        //     });
+        // });
+
+        // forward ping requests per adapterChannel rather than per topic.
+        adapterChannels.values().forEach(adapterChannel -> {
+            msg.setClientId(clientId);
+            channel.writeAndFlush(msg);
         });
     }
 
