@@ -20,7 +20,7 @@ def getSemVerFromPrevious(propFile='build.properties'){
 }
 
 @NonCPS
-def findVersion(data, prefix='', pattern='.*(\\d+\\.\\d+\\.\\d+)'){
+def findVersion(data, prefix='', pattern='(\d+\.\d+\.\d+(\.\d+)?(?:-(.*))?)'){
   def semver_match = "$data" =~ /${prefix}${pattern}/
   def semver = null
   try{
