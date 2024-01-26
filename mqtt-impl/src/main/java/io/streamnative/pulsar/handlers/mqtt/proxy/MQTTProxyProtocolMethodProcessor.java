@@ -475,17 +475,8 @@ public class MQTTProxyProtocolMethodProcessor extends AbstractCommonProtocolMeth
     private CompletableFuture<AdapterChannel> connectToBroker(final String topic) {
         return topicBrokers.computeIfAbsent(topic,
                 key -> lookupHandler.findBroker(TopicName.get(topic)).thenApply(mqttBroker ->
-                        adapterChannels.computeIfAbsent(mqttBroker, key1 -> {
-                            int keepAliveTimeSeconds = 0;
-                            if (connection != null) {
-                                keepAliveTimeSeconds = connection.getClientRestrictions().getKeepAliveTime();
-                            }
-                            AdapterChannel adapterChannel = proxyAdapter
-                                    .getAdapterChannel(mqttBroker, keepAliveTimeSeconds);
-                            adapterChannel.writeAndFlush(new MqttAdapterMessage(connection.getClientId(),
-                                connection.getConnectMessage()));
-                            return adapterChannel;
-                        })
+                        adapterChannels.computeIfAbsent(mqttBroker, key1 -> proxyAdapter
+                                .getAdapterChannel(mqttBroker, connection))
                 )
         );
     }
