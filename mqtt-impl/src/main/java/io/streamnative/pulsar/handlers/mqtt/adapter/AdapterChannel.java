@@ -46,20 +46,12 @@ public class AdapterChannel {
     }
 
     public CompletableFuture<Void> writeAndFlush(final MqttAdapterMessage adapterMsg) {
-        return writeAndFlush(adapterMsg, 1);
-    }
-
-    public CompletableFuture<Void> writeAndFlush(final MqttAdapterMessage adapterMsg, int attempts) {
         checkArgument(StringUtils.isNotBlank(adapterMsg.getClientId()), "clientId is blank");
         final String clientId = adapterMsg.getClientId();
         adapterMsg.setEncodeType(MqttAdapterMessage.EncodeType.ADAPTER_MESSAGE);
         CompletableFuture<Void> future = channelFuture.thenCompose(channel -> {
             if (!channel.isActive()) {
-                if (attempts > 5) {
-                    throw new CompletionException(new MQTTServerException("Failed to reconnect adapter channel."));
-                }
-                channelFuture = adapter.getChannel(broker, connection);
-                return writeAndFlush(adapterMsg, attempts + 1);
+                throw new CompletionException(new MQTTServerException("Adapter channel disconnected."));
             }
             return FutureUtils.completableFuture(channel.writeAndFlush(adapterMsg));
         });
