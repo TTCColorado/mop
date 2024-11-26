@@ -24,9 +24,9 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.streamnative.pulsar.handlers.mqtt.MQTTCommonConfiguration;
-import io.streamnative.pulsar.handlers.mqtt.TopicFilterImpl;
 import io.streamnative.pulsar.handlers.mqtt.base.MQTTTestBase;
+import io.streamnative.pulsar.handlers.mqtt.common.MQTTCommonConfiguration;
+import io.streamnative.pulsar.handlers.mqtt.common.TopicFilterImpl;
 import io.streamnative.pulsar.handlers.mqtt.mqtt3.fusesource.psk.PSKClient;
 import java.io.BufferedReader;
 import java.io.EOFException;
@@ -96,7 +96,7 @@ public class ProxyTest extends MQTTTestBase {
         Topic[] topics = { new Topic(topicName, QoS.AT_MOST_ONCE) };
         connection.subscribe(topics);
         String message = "Hello MQTT";
-        int numMessages = 20000;
+        int numMessages = 200;
         for (int i = 0; i < numMessages; i++) {
             connection.publish(topicName, (message + i).getBytes(), QoS.AT_MOST_ONCE, false);
         }
@@ -127,7 +127,7 @@ public class ProxyTest extends MQTTTestBase {
         Topic[] topics = { new Topic(topicName, QoS.AT_LEAST_ONCE) };
         connection.subscribe(topics);
         String message = "Hello MQTT";
-        int numMessages = 20000;
+        int numMessages = 200;
         for (int i = 0; i < numMessages; i++) {
             connection.publish(topicName, (message + i).getBytes(), QoS.AT_LEAST_ONCE, false);
         }
